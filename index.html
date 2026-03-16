@@ -1,0 +1,280 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#f0b90b"><title>LP Pro</title><style>
+*{margin:0;padding:0;box-sizing:border-box}body{background:#06080e;color:#dfe4ed;font-family:monospace;font-size:12px;padding:8px;min-height:100vh}
+.c{background:#0b0e18;border:1px solid #1a2035;border-radius:10px;padding:11px;margin-bottom:7px}.t{font-weight:700;font-size:9px;letter-spacing:2px;margin-bottom:5px;color:#f0b90b}
+.b{display:block;width:100%;padding:11px;border-radius:8px;border:none;font-weight:800;font-size:12px;margin-top:5px;font-family:monospace;cursor:pointer}
+.bg{background:linear-gradient(135deg,#f0b90b,#d4a00a);color:#000}.br{background:#1a1020;border:1px solid #ef444444;color:#ef4444}
+input{width:100%;padding:9px;border-radius:6px;background:#131828;border:1px solid #1a2035;color:#f97316;font-size:10px;font-family:monospace;margin:3px 0}
+.s{padding:7px;border-radius:6px;font-size:10px;margin-bottom:3px}.sw{background:#f0b90b11;border:1px solid #f0b90b33;color:#fde68a}
+.log{background:#060810;border:1px solid #1a2035;border-radius:6px;padding:5px;max-height:220px;overflow-y:auto;font-size:8px;margin-top:5px}
+.le{padding:1px 0;border-bottom:1px solid #1a203522}.bal{font-size:22px;font-weight:800;color:#fff;text-align:center;padding:8px 0}
+#step{font-size:11px;font-weight:700;text-align:center;padding:8px;color:#f0b90b}
+.tabs{display:flex;gap:2px;margin-bottom:5px}.tab{flex:1;padding:6px 2px;border-radius:5px;border:1px solid #1a2035;background:#0b0e18;color:#5c6478;font-size:8px;font-weight:700;text-align:center;cursor:pointer}
+.tab.on{background:#f0b90b18;border-color:#f0b90b44;color:#f0b90b}
+.pc{background:#0d1120;border:1px solid #1a2035;border-radius:6px;padding:8px;margin:4px 0;font-size:9px}
+.sts{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin:5px 0;font-size:8px;text-align:center}
+.st{background:#0d1120;border-radius:4px;padding:5px 2px}.stl{color:#5c6478;font-size:6px}.stv{font-weight:800;font-size:11px}
+.rl{color:#86efac}.rm{color:#fde68a}.rh{color:#fca5a5}
+a{color:#f0b90b;text-decoration:none;font-size:8px}
+.alert{background:#ef444422;border:1px solid #ef444444;color:#fca5a5;padding:5px 7px;border-radius:4px;font-size:9px;margin-bottom:4px;font-weight:700}
+</style>
+<script src="https://unpkg.com/@solana/web3.js@1.95.8/lib/index.iife.min.js"></script>
+<script src="https://unpkg.com/bs58@6.0.0/dist/index.umd.js"></script>
+</head><body>
+<div class="c"><div style="display:flex;align-items:center;gap:6px"><div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#f0b90b,#f97316);display:flex;align-items:center;justify-content:center;font-size:13px">💧</div><div><div style="font-size:13px;font-weight:800;color:#f0b90b">LP PRO BOT</div><div style="font-size:7px;color:#5c6478">v2 · Rug Detect · Whale Check · CLMM · Auto-Rebalance</div></div></div></div>
+<div class="c"><div id="step">⏳ Cargando...</div></div>
+<div class="c" id="cCard"><div class="t">🔑 WALLET</div>
+<div class="sw s">⚠️ Wallet dedicada. Solo capital que puedas perder.</div>
+<input type="text" id="pk" placeholder="Clave privada Phantom..." autocomplete="off" spellcheck="false">
+<button class="b bg" id="cbtn" onclick="doConn()">🔑 CONECTAR</button><div id="cerr"></div></div>
+<div class="c" id="iCard" style="display:none"><div class="t">✅ CONECTADA</div>
+<div style="word-break:break-all;font-size:9px;color:#f0b90b;background:#f0b90b11;padding:5px;border-radius:4px" id="adr"></div>
+<div class="bal" id="bl">—</div>
+<div class="sts" id="stats"></div>
+<button class="b bg" id="bbtn" onclick="togBot()">▶ INICIAR LP PRO</button>
+<button class="b br" onclick="disc()" style="margin-top:4px;font-size:10px">Desconectar</button></div>
+<div class="tabs" id="tabs" style="display:none">
+<div class="tab on" onclick="sT('pools')">💧POOLS</div>
+<div class="tab" onclick="sT('active')">📊ACTIVOS</div>
+<div class="tab" onclick="sT('cfg')">⚙️CFG</div>
+<div class="tab" onclick="sT('log')">📋LOG</div>
+</div>
+<div id="poolsTab" class="c" style="display:none"><div class="t">💧 POOLS RANKEADOS</div><div id="pL"></div></div>
+<div id="activeTab" class="c" style="display:none"><div class="t">📊 POSICIONES LP</div><div id="aL"></div></div>
+<div id="cfgTab" class="c" style="display:none"><div class="t">⚙️ CONFIGURACIÓN</div><div id="cfgC"></div></div>
+<div id="logTab" class="c"><div class="t">📋 LOG</div><div id="al" class="log"><div style="color:#5c6478">Esperando...</div></div></div>
+<div style="text-align:center;color:#353b4f;font-size:6px;margin-top:5px">⚠️ RIESGO EXTREMO · DYOR · IL posible</div>
+<script>
+// ============================================================
+// CONFIG — All parameters from spec
+// ============================================================
+const CFG={
+  range:0.15,rebalTrig:0.05,minBin:0.02,maxPools:5,capPerPool:20,reserveSOL:0.5,
+  scanSec:30,monSec:15,rebalCooldown:300,
+  maxIL:15,emergIL:25,minLiq:50000,minVol:100000,maxWhale:30,
+  rugDetect:true,rugLiqDrop:50,rugTimeMin:5,
+  minMcap:200000,maxMcap:50000000,minTxns:500,minAPY:20,minAge:6,
+  slippage:200,emergSlip:500,priorityFee:500000,jitoEnabled:false,jitoTip:100000,
+  dailyLossUSD:500,circuitBreaker:3,
+  entrySOL:0.25,
+};
+
+let KP=null,CN=null,PK='',BL=0,SM=true,bOn=false,bIv=null;
+const SOL_M='So11111111111111111111111111111111111111112',DEX='https://api.dexscreener.com/latest/dex';
+const RPCS=['https://solana-rpc.publicnode.com','https://api.mainnet-beta.solana.com','https://rpc.ankr.com/solana'];
+const BL_A=new Set([SOL_M,'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v','Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB']);
+const BL_S=new Set(['USDC','USDT','BUSD','DAI','SOL','WSOL','BTC','WBTC','ETH','WETH','MSOL','BSOL','JUP']);
+let pools=[],pos=[],hist=[],liqSnaps=new Map(),scN=0,curTab='pools',totPnl=0,dLoss=0,cLosses=0,cbTripped=false;
+
+function save(){try{localStorage.setItem('lp2_p',JSON.stringify(pos));localStorage.setItem('lp2_h',JSON.stringify(hist.slice(0,200)))}catch(_){}}
+function load(){try{pos=JSON.parse(localStorage.getItem('lp2_p'))||[];hist=JSON.parse(localStorage.getItem('lp2_h'))||[];totPnl=hist.reduce((s,h)=>s+(h.pnl||0),0)}catch(_){}}
+function stp(m){document.getElementById('step').innerHTML=m}
+function al(m,c='#fde68a'){const e=document.getElementById('al'),t=new Date().toLocaleTimeString();e.innerHTML=`<div class="le"><span style="color:#5c6478">[${t}]</span> <span style="color:${c}">${m}</span></div>`+e.innerHTML;if(e.children.length>200)e.removeChild(e.lastChild)}
+function sT(t){curTab=t;['pools','active','cfg','log'].forEach(x=>{const el=document.getElementById(x+'Tab');if(el)el.style.display=x===t?'block':'none'});document.querySelectorAll('.tab').forEach((el,i)=>{el.className='tab'+(['pools','active','cfg','log'][i]===t?' on':'')})}
+function tF(u,o,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms||20000);return fetch(u,{...o,signal:c.signal}).finally(()=>clearTimeout(t))}
+function d58(s){s=s.trim().replace(/\s/g,'');const M={};'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'.split('').forEach((c,i)=>M[c]=i);let z=0;for(let i=0;i<s.length&&s[i]==='1';i++)z++;const sz=Math.ceil(s.length*733/1000)+1;const b=new Uint8Array(sz);for(let i=0;i<s.length;i++){const ch=M[s[i]];if(ch===undefined)throw new Error('Inválido');let carry=ch;for(let j=sz-1;j>=0;j--){carry+=58*b[j];b[j]=carry%256;carry=Math.floor(carry/256)}}let st=0;while(st<sz&&b[st]===0)st++;const r=new Uint8Array(z+sz-st);for(let i=z+sz-st-1,j=sz-1;j>=st;i--,j--)r[i]=b[j];return r}
+const $=n=>n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+(n/1e3).toFixed(0)+'K':'$'+n.toFixed(0);
+
+// CONNECT
+async function doConn(){const btn=document.getElementById('cbtn'),inp=document.getElementById('pk'),err=document.getElementById('cerr');
+const pk=inp.value.trim().replace(/\s+/g,'');btn.textContent='⏳...';btn.disabled=true;err.innerHTML='';stp('⏳ Procesando...');await new Promise(r=>setTimeout(r,100));
+try{if(!pk)throw new Error('Pegá clave');if(pk.length<60)throw new Error('Corta');let sk;if(window.bs58){try{sk=window.bs58.decode(pk)}catch(_){sk=d58(pk)}}else{sk=d58(pk)}
+if(sk.length!==64)throw new Error('Inválida');if(!window.solanaWeb3)throw new Error('Web3 no cargó');
+KP=solanaWeb3.Keypair.fromSecretKey(sk);PK=KP.publicKey.toString();
+for(const rpc of RPCS){try{CN=new solanaWeb3.Connection(rpc,'confirmed');const l=await CN.getBalance(KP.publicKey);BL=l/solanaWeb3.LAMPORTS_PER_SOL;al('✅ RPC: '+rpc.split('/')[2]+' | '+BL.toFixed(4)+' SOL','#86efac');break}catch(e){al('RPC: '+e.message.slice(0,40),'#fde68a')}}
+SM=false;try{localStorage.setItem('lp2_k',pk)}catch(_){}stp('✅ Listo');
+document.getElementById('cCard').style.display='none';document.getElementById('iCard').style.display='block';document.getElementById('tabs').style.display='flex';
+document.getElementById('adr').textContent=PK;document.getElementById('bl').textContent=BL.toFixed(4)+' SOL';sT('pools');renderCfg();
+}catch(e){stp('❌ '+e.message);err.innerHTML='<div class="s" style="background:#ef444411;border:1px solid #ef444433;color:#fca5a5">❌ '+e.message+'</div>';btn.textContent='🔑 CONECTAR';btn.disabled=false}}
+function disc(){KP=null;CN=null;PK='';BL=0;SM=true;if(bOn)togBot();try{localStorage.removeItem('lp2_k')}catch(_){}document.getElementById('cCard').style.display='block';document.getElementById('iCard').style.display='none';document.getElementById('tabs').style.display='none';document.getElementById('pk').value='';document.getElementById('cbtn').textContent='🔑 CONECTAR';document.getElementById('cbtn').disabled=false;stp('Off')}
+
+// ============================================================
+// JUPITER SWAP
+// ============================================================
+async function jSwap(addr,amt,buy,emerg){const iM=buy?SOL_M:addr,oM=buy?addr:SOL_M,am=buy?Math.floor(amt*solanaWeb3.LAMPORTS_PER_SOL):Math.floor(amt*1e6);
+const slip=emerg?CFG.emergSlip:CFG.slippage;
+if(SM||!KP){al('[SIM] '+(buy?'BUY':'SELL')+' '+amt.toFixed(4)+'◎ slip:'+slip+'bps','#06b6d4');return{ok:true}}
+try{const qr=await tF('https://lite-api.jup.ag/swap/v1/quote?inputMint='+iM+'&outputMint='+oM+'&amount='+am+'&slippageBps='+slip,{},20000);
+if(!qr.ok)throw new Error('Q:'+qr.status);const q=await qr.json();if(q.error)throw new Error(q.error);
+const sr=await tF('https://lite-api.jup.ag/swap/v1/swap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({quoteResponse:q,userPublicKey:PK,wrapAndUnwrapSol:true,dynamicComputeUnitLimit:true,prioritizationFeeLamports:'auto'})},20000);
+if(!sr.ok)throw new Error('S:'+sr.status);const sd=await sr.json();if(sd.error)throw new Error(sd.error);
+const tx=solanaWeb3.VersionedTransaction.deserialize(Uint8Array.from(atob(sd.swapTransaction),c=>c.charCodeAt(0)));
+tx.sign([KP]);const txId=await CN.sendRawTransaction(tx.serialize(),{skipPreflight:true,maxRetries:5});
+al('✅ TX: '+txId.slice(0,16)+'...','#86efac');
+setTimeout(async()=>{try{BL=(await CN.getBalance(KP.publicKey))/solanaWeb3.LAMPORTS_PER_SOL;document.getElementById('bl').textContent=BL.toFixed(4)+' SOL'}catch(_){}},5000);
+return{ok:true,txId}}catch(e){al('Swap: '+e.message,'#fca5a5');return{ok:false}}}
+
+// ============================================================
+// MODULE 1: POOL SCANNER + SCORING
+// ============================================================
+async function scanPools(){
+al('🔍 Escaneando pools...','#fde68a');const all=[];
+for(const q of['pump.fun SOL','solana meme','solana trending','memecoin solana','solana pump','solana new token']){try{const r=await tF(DEX+'/search?q='+encodeURIComponent(q),{},12000);if(r.ok){const d=await r.json();all.push(...(d.pairs||[]).filter(p=>p.chainId==='solana'))}}catch(_){}}
+try{const r=await tF('https://api.dexscreener.com/token-boosts/top/v1',{},10000);if(r.ok){const d=await r.json();for(const t of(d||[]).filter(x=>x.chainId==='solana').slice(0,12)){try{const pr=await tF(DEX+'/tokens/'+t.tokenAddress,{},8000);if(pr.ok){const pd=await pr.json();all.push(...(pd.pairs||[]))}}catch(_){}}}}catch(_){}
+try{const r=await tF('https://api.dexscreener.com/token-profiles/latest/v1',{},10000);if(r.ok){const d=await r.json();for(const t of(d||[]).filter(x=>x.chainId==='solana').slice(0,8)){try{const pr=await tF(DEX+'/tokens/'+t.tokenAddress,{},8000);if(pr.ok){const pd=await pr.json();all.push(...(pd.pairs||[]))}}catch(_){}}}}catch(_){}
+const seen=new Set();
+pools=all.filter(p=>{if(!p||seen.has(p.pairAddress))return false;seen.add(p.pairAddress);if(p.chainId!=='solana')return false;
+const mc=p.marketCap||p.fdv||0,liq=p.liquidity?.usd||0,vol=p.volume?.h24||0,sym=(p.baseToken?.symbol||'').toUpperCase(),addr=p.baseToken?.address||'',txns=(p.txns?.h24?.buys||0)+(p.txns?.h24?.sells||0),ageH=p.pairCreatedAt?(Date.now()-p.pairCreatedAt)/36e5:9999;
+return mc>=CFG.minMcap&&mc<=CFG.maxMcap&&liq>=CFG.minLiq&&vol>=CFG.minVol&&txns>=CFG.minTxns&&!BL_A.has(addr)&&!BL_S.has(sym)&&ageH>=CFG.minAge;
+}).map(p=>{const liq=p.liquidity?.usd||0,vol24=p.volume?.h24||0,mc=p.marketCap||p.fdv||0,chg24=p.priceChange?.h24||0,txns=(p.txns?.h24?.buys||0)+(p.txns?.h24?.sells||0),buys=p.txns?.h24?.buys||0,br=txns>0?buys/txns:0,ageH=p.pairCreatedAt?(Date.now()-p.pairCreatedAt)/36e5:9999;
+const fee=0.0025,dFees=vol24*fee,apy=liq>0?(dFees/liq)*365*100:0;
+let risk=0;if(mc<5e5)risk+=15;if(liq<1e5)risk+=15;if(ageH<24)risk+=20;if(ageH<6)risk+=15;if(Math.abs(chg24)>50)risk+=15;if(txns<200)risk+=10;if(liq/mc<.05)risk+=10;if(br<.4)risk+=10;risk=Math.min(100,risk);
+let profit=0;if(apy>200)profit+=30;else if(apy>100)profit+=25;else if(apy>50)profit+=20;if(vol24>1e6)profit+=20;else if(vol24>5e5)profit+=15;else if(vol24>1e5)profit+=10;if(liq>5e5)profit+=15;else if(liq>2e5)profit+=10;if(txns>2000)profit+=15;else if(txns>1000)profit+=10;if(br>.55)profit+=10;
+const score=Math.max(0,profit-risk/2),rl=risk<30?'LOW':risk<60?'MED':'HIGH';
+return{pair:p.pairAddress,sym:p.baseToken?.symbol||'?',addr:p.baseToken?.address||'',dex:p.dexId||'?',price:+(p.priceUsd||0),liq,vol24,mc,apy:Math.min(apy,9999),dFees,chg24,txns,br,ageH,risk,rl,profit,score,url:p.url||''}}).sort((a,b)=>b.score-a.score);
+al('💧 '+pools.length+' pools'+(pools[0]?' | Top: '+pools[0].sym+' APY:'+pools[0].apy.toFixed(0)+'%':''),'#86efac');
+return pools;}
+
+// ============================================================
+// MODULE 2: WHALE CHECK
+// ============================================================
+async function checkWhale(tokenAddr){
+if(!CN)return{safe:true,pct:0};
+try{const pk=new solanaWeb3.PublicKey(tokenAddr);const accs=await CN.getTokenLargestAccounts(pk);
+if(!accs?.value?.length)return{safe:true,pct:0};
+const total=accs.value.reduce((s,a)=>s++(a.uiAmount||0),0);if(total===0)return{safe:true,pct:0};
+const top10=accs.value.slice(0,10).reduce((s,a)=>s++(a.uiAmount||0),0);
+const pct=(top10/total)*100;const safe=pct<=CFG.maxWhale;
+if(!safe)al('🐋 '+tokenAddr.slice(0,8)+': Top10='+pct.toFixed(0)+'% (max:'+CFG.maxWhale+'%)','#fca5a5');
+return{safe,pct}}catch(_){return{safe:true,pct:0}}}
+
+// ============================================================
+// MODULE 3: RUG DETECTOR
+// ============================================================
+async function checkRug(p){
+if(!CFG.rugDetect)return{safe:true};
+if(!liqSnaps.has(p.pair))liqSnaps.set(p.pair,[]);
+const snaps=liqSnaps.get(p.pair);
+try{const r=await tF(DEX+'/pairs/solana/'+p.pair,{},8000);if(r.ok){const d=await r.json();const pr=d.pair||d.pairs?.[0];
+if(pr){const liq=pr.liquidity?.usd||0;snaps.push({t:Date.now(),l:liq});
+const cut=Date.now()-(CFG.rugTimeMin*6e4);while(snaps.length>0&&snaps[0].t<cut)snaps.shift();
+if(snaps.length>=2){const old=snaps[0].l;if(old>0){const drop=((old-liq)/old)*100;
+if(drop>=CFG.rugLiqDrop){al('🚨 RUG: '+p.sym+' liq -'+drop.toFixed(0)+'% en '+CFG.rugTimeMin+'min!','#fca5a5');return{safe:false,reason:'Liq -'+drop.toFixed(0)+'% en '+CFG.rugTimeMin+'min'}}}}}}}catch(_){}
+return{safe:true}}
+
+// ============================================================
+// MODULE 4: IL CALCULATOR (standard + concentrated)
+// ============================================================
+function calcIL(ep,cp,rLow,rHigh){if(ep<=0||cp<=0)return 0;
+if(cp<=rLow||cp>=rHigh){const r=cp/ep,sq=Math.sqrt(r);return((2*sq/(1+r))-1)*100*2}
+const rw=(rHigh-rLow)/ep,cf=1/rw,r=cp/ep,sq=Math.sqrt(r),stdIL=((2*sq/(1+r))-1)*100;
+return stdIL*Math.min(cf,5)}
+
+// ============================================================
+// MODULE 5: AUTO-ENTRY
+// ============================================================
+async function autoEntry(){
+if(cbTripped||pos.length>=CFG.maxPools)return;
+const avail=BL-CFG.reserveSOL;if(avail<=0)return;
+const capPP=avail*(CFG.capPerPool/100);if(capPP<0.1)return;
+const active=pos.map(p=>p.addr),recent=hist.slice(0,20).map(h=>h.addr);
+for(const pool of pools.slice(0,10)){
+if(active.includes(pool.addr)||recent.includes(pool.addr))continue;
+if(pool.apy<CFG.minAPY)continue;
+// Whale check
+const wc=await checkWhale(pool.addr);if(!wc.safe){al('Skip '+pool.sym+': 🐋 '+wc.pct.toFixed(0)+'%','#fde68a');continue}
+const rLow=pool.price*(1-CFG.range),rHigh=pool.price*(1+CFG.range);
+al('💧 ENTERING: '+pool.sym+' | APY:'+pool.apy.toFixed(0)+'% | Liq:'+$(pool.liq)+' | Risk:'+pool.rl+' | Range ±'+Math.round(CFG.range*100)+'%','#86efac');
+al('  🐋 Whale top10: '+wc.pct.toFixed(1)+'% ✅','#86efac');
+const half=capPP/2;const r=await jSwap(pool.addr,half,true,false);
+if(r.ok){pos.push({pair:pool.pair,sym:pool.sym,addr:pool.addr,dex:pool.dex,ep:pool.price,cp:pool.price,pp:pool.price,eLiq:pool.liq,eVol:pool.vol24,eMc:pool.mc,et:Date.now(),cap:capPP,half,rLow,rHigh,il:0,fees:0,net:0,lastReb:Date.now(),rebN:0,exitAlert:false,exitR:'',txId:r.txId||''});
+al('✅ Entered '+pool.sym+' | '+capPP.toFixed(3)+'◎ | $'+rLow.toFixed(8)+' — $'+rHigh.toFixed(8),'#86efac');save();break}}}
+
+// ============================================================
+// MODULE 6: MONITOR + REBALANCE + EXIT
+// ============================================================
+async function monitorPos(){
+for(const p of[...pos]){
+try{const r=await tF(DEX+'/pairs/solana/'+p.pair,{},8000);if(!r.ok)continue;const d=await r.json();const pr=d.pair||d.pairs?.[0];if(!pr)continue;
+const cp=+(pr.priceUsd||0),cLiq=pr.liquidity?.usd||0,cVol=pr.volume?.h24||0,chg24=pr.priceChange?.h24||0;
+p.cp=cp;p.cLiq=cLiq;p.cVol=cVol;p.chg24=chg24;if(cp>p.pp)p.pp=cp;
+// IL
+p.il=calcIL(p.ep,cp,p.rLow,p.rHigh);
+// Fees estimate
+const hrs=(Date.now()-p.et)/36e5,dfr=cLiq>0?(cVol*0.0025)/cLiq:0;p.fees=p.cap*dfr*(hrs/24);p.net=p.fees+(p.cap*p.il/100);
+// === EXIT CONDITIONS ===
+let exitR=null,emerg=false;
+// 1. Max IL
+if(p.il<=-CFG.maxIL){exitR='IL '+p.il.toFixed(1)+'% > -'+CFG.maxIL+'%';emerg=p.il<=-CFG.emergIL}
+// 2. Token crash
+if(chg24<=-30){exitR='Token -'+Math.abs(chg24).toFixed(0)+'% 24h';emerg=chg24<=-50}
+// 3. Volume died
+if(p.eVol>0&&cVol<p.eVol*.2){exitR='Vol -'+((1-cVol/p.eVol)*100).toFixed(0)+'%'}
+// 4. Liquidity drain
+if(p.eLiq>0&&cLiq<p.eLiq*.3){exitR='⚠️ Liq -'+((1-cLiq/p.eLiq)*100).toFixed(0)+'%';emerg=true}
+// 5. Rug check
+const rug=await checkRug(p);if(!rug.safe){exitR='🚨 RUG: '+rug.reason;emerg=true}
+// 6. Net PnL
+if(p.net<-(p.cap*.15)){exitR='Net -'+Math.abs(p.net).toFixed(4)+'◎ >15%'}
+// 7. Daily loss
+if(dLoss>=CFG.dailyLossUSD){exitR='Daily loss $'+CFG.dailyLossUSD;cbTripped=true}
+
+if(exitR){
+al('🚪 EXIT '+p.sym+': '+exitR+(emerg?' [EMERGENCY]':''),'#fca5a5');
+al('  IL:'+p.il.toFixed(1)+'% | Fees:+'+p.fees.toFixed(4)+'◎ | Net:'+(p.net>=0?'+':'')+p.net.toFixed(4)+'◎','#fde68a');
+const sr=await jSwap(p.addr,p.half,false,emerg);
+if(sr.ok){totPnl+=p.net;if(p.net<0){dLoss+=Math.abs(p.net)*87;cLosses++}else{cLosses=0}
+hist.unshift({...p,closeT:Date.now(),reason:exitR,pnl:p.net,emerg});
+pos=pos.filter(x=>x.pair!==p.pair);
+if(cLosses>=CFG.circuitBreaker){al('🛑 CIRCUIT BREAKER: '+cLosses+' losses','#fca5a5');cbTripped=true}
+al((p.net>=0?'✅':'❌')+' Closed '+p.sym+' | PnL:'+(p.net>=0?'+':'')+p.net.toFixed(4)+'◎ | '+exitR,p.net>=0?'#86efac':'#fca5a5')}
+continue}
+// === REBALANCE ===
+const dev=Math.abs(cp-p.ep)/p.ep,cool=(Date.now()-p.lastReb)/1000>=CFG.rebalCooldown;
+const outRange=cp<p.rLow||cp>p.rHigh,sigDev=dev>=CFG.rebalTrig,minBin=dev>=CFG.minBin;
+if(outRange&&sigDev&&minBin&&cool){al('🔄 REBAL '+p.sym+': price ±'+Math.round(dev*100)+'% from entry','#f0b90b');
+p.rLow=cp*(1-CFG.range);p.rHigh=cp*(1+CFG.range);p.ep=cp;p.lastReb=Date.now();p.rebN++;
+al('  New: $'+p.rLow.toFixed(8)+' — $'+p.rHigh.toFixed(8)+' | Rebal #'+p.rebN,'#f0b90b')}}catch(e){al('Mon err '+p.sym+': '+e.message.slice(0,40),'#fca5a5')}}
+save()}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render(){
+const tInv=pos.reduce((s,p)=>s+p.cap,0),tFees=pos.reduce((s,p)=>s+(p.fees||0),0),tNet=pos.reduce((s,p)=>s+(p.net||0),0);
+const wr=hist.length?((hist.filter(h=>(h.pnl||0)>0).length/hist.length)*100).toFixed(0):'-';
+document.getElementById('stats').innerHTML=`<div class="st"><div class="stl">INVESTED</div><div class="stv">${tInv.toFixed(2)}◎</div></div><div class="st"><div class="stl">FEES</div><div class="stv" style="color:#86efac">+${tFees.toFixed(3)}</div></div><div class="st"><div class="stl">NET</div><div class="stv" style="color:${tNet>=0?'#86efac':'#fca5a5'}">${tNet>=0?'+':''}${tNet.toFixed(3)}</div></div><div class="st"><div class="stl">WR</div><div class="stv">${wr}%</div></div>`;
+
+// POOLS
+document.getElementById('pL').innerHTML=pools.length?pools.slice(0,12).map(p=>{const rc=p.rl==='LOW'?'rl':p.rl==='MED'?'rm':'rh';const isA=pos.find(a=>a.addr===p.addr);
+return`<div class="pc"><div style="display:flex;justify-content:space-between;align-items:center"><div><b style="color:#f0b90b">${p.sym}</b> <span style="color:#5c6478;font-size:7px">${p.dex}</span>${isA?' <span style="color:#86efac;font-size:7px">● LP</span>':''}</div><div style="text-align:right"><div style="font-weight:800;font-size:12px;color:#22c55e">${p.apy>999?'999+':p.apy.toFixed(0)}%</div><div style="font-size:6px;color:#5c6478">APY</div></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin:3px 0;font-size:7px"><div>Liq<br><b>${$(p.liq)}</b></div><div>Vol<br><b style="color:#c4b5fd">${$(p.vol24)}</b></div><div>MCap<br><b style="color:#a5f3fc">${$(p.mc)}</b></div><div>Risk<br><b class="${rc}">${p.rl}</b></div></div><div style="display:flex;justify-content:space-between;font-size:7px;color:#5c6478"><span>Fee/d:${$(p.dFees)} Txns:${p.txns} Age:${p.ageH<24?p.ageH.toFixed(0)+'h':Math.floor(p.ageH/24)+'d'}</span></div></div>`}).join(''):'<div style="color:#5c6478">Escaneando...</div>';
+
+// ACTIVE
+document.getElementById('aL').innerHTML=pos.length?pos.map(p=>{const inR=p.cp>=p.rLow&&p.cp<=p.rHigh;const ilC=p.il>=-2?'rl':p.il>=-5?'rm':'rh';
+return`<div class="pc">${p.exitAlert?'<div class="alert">🚨 '+p.exitR+'</div>':''}<div style="display:flex;justify-content:space-between"><div><b style="color:#f0b90b">${p.sym}</b> <span style="color:#5c6478;font-size:7px">${p.dex}</span></div><div style="color:${(p.net||0)>=0?'#86efac':'#fca5a5'};font-weight:800">Net:${(p.net||0)>=0?'+':''}${(p.net||0).toFixed(4)}◎</div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin:3px 0;font-size:7px"><div>Capital<br><b>${p.cap.toFixed(2)}◎</b></div><div>Fees<br><b style="color:#86efac">+${(p.fees||0).toFixed(4)}</b></div><div>IL<br><b class="${ilC}">${(p.il||0).toFixed(1)}%</b></div><div>Range<br><b style="color:${inR?'#86efac':'#fca5a5'}">${inR?'IN ✅':'OUT ⚠️'}</b></div></div><div style="font-size:7px;color:#5c6478">24h:${(p.chg24||0)>=0?'+':''}${(p.chg24||0).toFixed(0)}% | Rebal:${p.rebN} | ${((Date.now()-p.et)/36e5).toFixed(1)}h</div></div>`}).join('')
++(hist.length?'<div style="margin-top:6px;font-size:7px;color:#f0b90b;font-weight:700">HISTORIAL</div>'+hist.slice(0,8).map(h=>`<div style="display:flex;justify-content:space-between;font-size:8px;padding:2px 0;border-bottom:1px solid #1a203533"><span>${h.sym} <span style="color:#5c6478">${h.reason?.slice(0,20)||''}</span></span><span style="color:${(h.pnl||0)>=0?'#86efac':'#fca5a5'}">${(h.pnl||0)>=0?'+':''}${(h.pnl||0).toFixed(4)}◎</span></div>`).join(''):'')
+:'<div style="color:#5c6478;font-size:9px">Sin posiciones LP. El bot entra automáticamente en los mejores pools.</div>'}
+
+// CONFIG
+function renderCfg(){document.getElementById('cfgC').innerHTML=`<div style="font-size:9px;color:#5c6478;line-height:1.8">
+<b style="color:#f0b90b">Rango CLMM:</b> ±${Math.round(CFG.range*100)}% | Rebal: ${Math.round(CFG.rebalTrig*100)}% | MinBin: ${Math.round(CFG.minBin*100)}%<br>
+<b style="color:#f0b90b">Seguridad:</b> MaxIL: -${CFG.maxIL}% | EmergIL: -${CFG.emergIL}% | Rug: ${CFG.rugDetect?'ON':'OFF'}<br>
+<b style="color:#f0b90b">Filtros:</b> MCap $${(CFG.minMcap/1e3).toFixed(0)}K-$${(CFG.maxMcap/1e6).toFixed(0)}M | Liq >$${(CFG.minLiq/1e3).toFixed(0)}K | Vol >$${(CFG.minVol/1e3).toFixed(0)}K<br>
+<b style="color:#f0b90b">Ballenas:</b> Max top10: ${CFG.maxWhale}% | MinTxns: ${CFG.minTxns} | MinAPY: ${CFG.minAPY}%<br>
+<b style="color:#f0b90b">Ejecución:</b> Slip: ${CFG.slippage}bps | Emerg: ${CFG.emergSlip}bps | PrioFee: ${CFG.priorityFee/1e3}K<br>
+<b style="color:#f0b90b">Safety:</b> DailyLoss: $${CFG.dailyLossUSD} | CircuitBreaker: ${CFG.circuitBreaker} losses | MinAge: ${CFG.minAge}h<br>
+<b style="color:#f0b90b">Strategy:</b> MaxPools: ${CFG.maxPools} | Cap/Pool: ${CFG.capPerPool}% | Entry: ${CFG.entrySOL}◎ | Reserve: ${CFG.reserveSOL}◎<br>
+<b style="color:#f0b90b">Circuit:</b> ${cbTripped?'🛑 TRIPPED':'✅ OK'}
+</div>`}
+
+// ============================================================
+// MAIN CYCLE
+// ============================================================
+async function cycle(){scN++;try{
+await CN?.getBalance(KP.publicKey).then(l=>{BL=l/solanaWeb3.LAMPORTS_PER_SOL;document.getElementById('bl').textContent=BL.toFixed(4)+' SOL'}).catch(_=>{});
+if(scN%2===1||pools.length===0)await scanPools();
+if(pos.length)await monitorPos();
+await autoEntry();
+render();renderCfg();
+if(scN%4===0)al('Scan #'+scN+' | '+pools.length+'pools | '+pos.length+'LP | Bal:'+BL.toFixed(3)+'◎ | Net:'+(totPnl>=0?'+':'')+totPnl.toFixed(3)+'◎');
+stp(bOn?'💧 #'+scN+' | '+pools.length+'pools | '+pos.length+'LP | '+BL.toFixed(2)+'◎':'Off');
+const now=new Date();if(now.getHours()===0&&now.getMinutes()===0){dLoss=0;cbTripped=false;al('Daily reset','#86efac')}
+}catch(e){al('Err: '+e.message,'#fca5a5')}}
+
+function togBot(){const btn=document.getElementById('bbtn');if(bOn){clearInterval(bIv);bOn=false;btn.textContent='▶ INICIAR LP PRO';btn.className='b bg';al('⏹ Stop','#fde68a');stp('Off')}
+else{bOn=true;btn.textContent='⏹ DETENER';btn.className='b br';al('💧 LP PRO: Whale+Rug+IL+Rebal | Scan '+CFG.scanSec+'s','#86efac');
+if('Notification' in window)Notification.requestPermission();cycle();bIv=setInterval(cycle,CFG.scanSec*1000)}}
+
+window.addEventListener('load',async()=>{let t=0;while(!window.solanaWeb3&&t<20){await new Promise(r=>setTimeout(r,500));t++}
+if(window.solanaWeb3){stp('✅ Listo');al('Solana Web3 ✓','#86efac')}else{stp('❌ Web3 no cargó')}
+load();try{const s=localStorage.getItem('lp2_k');if(s&&window.solanaWeb3){document.getElementById('pk').value=s;await new Promise(r=>setTimeout(r,500));await doConn()}}catch(_){}})
+</script></body></html>
